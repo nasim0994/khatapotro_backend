@@ -6,7 +6,7 @@ const categorySchema = new Schema<ICategory>(
     name: {
       type: String,
       required: true,
-      unique: true,
+      trim: true,
     },
     icon: {
       color: { type: String, required: true },
@@ -27,5 +27,7 @@ const categorySchema = new Schema<ICategory>(
     timestamps: true,
   },
 );
+
+categorySchema.index({ user: 1, name: 1 }, { unique: true });
 
 export const Category = model<ICategory>('Category', categorySchema);

@@ -17,6 +17,7 @@ const transactionSchema = new Schema<ITransaction>(
     },
     note: {
       type: String,
+      trim: true,
     },
     user: {
       type: Schema.Types.ObjectId,

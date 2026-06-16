@@ -7,6 +7,6 @@ import {
 const Router = express.Router();
 
 Router.get('/balance/:id', auth(), getUserBalanceController);
-Router.get('/statistics/:id', transactionStatisticsController);
+Router.get('/statistics/:id', auth(), transactionStatisticsController);
 
 export const reportRoute = Router;

@@ -15,27 +15,39 @@ export const registerUserService = async (data: IUser) => {
   try {
     session.startTransaction();
 
-    const isExist = await User.findOne({ email: data.email }).session(session);
-
-    if (isExist) {
-      throw new AppError(httpStatus.BAD_REQUEST, 'Email already exists');
-    }
-
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    const [user] = await User.create(
-      [
-        {
-          ...data,
-          otp,
-          status: 'pending',
-          otpExpires: new Date(Date.now() + 5 * 60 * 1000),
-        },
-      ],
-      { session },
+    const existingUser = await User.findOne({ email: data.email }).session(
+      session,
     );
 
-    // Mail send
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
+
+    let user;
+
+    if (existingUser) {
+      if (existingUser.status !== 'pending') {
+        throw new AppError(httpStatus.BAD_REQUEST, 'Email already exists');
+      }
+
+      existingUser.otp = otp;
+      existingUser.otpExpires = otpExpires;
+      user = await existingUser.save({ session });
+    } else {
+      const [createdUser] = await User.create(
+        [
+          {
+            ...data,
+            otp,
+            status: 'pending',
+            otpExpires,
+          },
+        ],
+        { session },
+      );
+
+      user = createdUser;
+    }
+
     await sendMail({
       to: user.email,
       subject: 'Verify your email',
@@ -54,7 +66,7 @@ export const registerUserService = async (data: IUser) => {
     await session.abortTransaction();
     throw error;
   } finally {
-    session.endSession();
+    await session.endSession();
   }
 };
 
@@ -82,7 +94,19 @@ export const verifyRegisterOtpService = async (data: {
 
   await user.save();
 
-  return user;
+  const jwtPayload = {
+    _id: user?._id,
+    email: user?.email,
+    name: user?.name,
+  };
+
+  const accessToken = createToken(
+    jwtPayload,
+    config.JWT_ACCESS_SECRET as string,
+    config.JWT_ACCESS_EXPIRES_IN as string,
+  );
+
+  return accessToken;
 };
 
 export const resendOtpService = async (email: string) => {

@@ -23,6 +23,7 @@ export const verifyRegisterOtpController = catchAsync(async (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Verification successfully',
+    data: result,
   });
 });
 

@@ -1,8 +1,10 @@
 import { catchAsync } from '../../utils/catchAsync';
 import {
+  forgotPasswordService,
   loginUserService,
   registerUserService,
   resendOtpService,
+  setNewPasswordService,
   verifyRegisterOtpService,
 } from './userAuthService';
 import httpStatus from 'http-status';
@@ -49,5 +51,27 @@ export const loginUserController = catchAsync(async (req, res) => {
     data: {
       accessToken,
     },
+  });
+});
+
+export const forgotPasswordController = catchAsync(async (req, res) => {
+  const { email } = req.body;
+  await forgotPasswordService(email);
+
+  res.status(200).json({
+    success: true,
+    statusCode: httpStatus.OK,
+    message: 'OTP sent to your email',
+  });
+});
+
+export const setNewPasswordController = catchAsync(async (req, res) => {
+  const { email, otp, password } = req.body;
+  await setNewPasswordService(email, otp, password);
+
+  res.status(200).json({
+    success: true,
+    statusCode: httpStatus.OK,
+    message: 'Password reset successfully',
   });
 });

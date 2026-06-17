@@ -191,3 +191,59 @@ export const loginUserService = async (payload: ILoginUser) => {
     refreshToken,
   };
 };
+
+export const forgotPasswordService = async (email: string) => {
+  const user = await User.findOne({ email });
+
+  if (!user) throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+  user.otp = otp;
+  user.otpExpires = new Date(Date.now() + 5 * 60 * 1000);
+
+  await user.save();
+
+  await sendMail({
+    to: user.email,
+    subject: 'Reset your password',
+    html: `
+      <h2>Password Reset</h2>
+      <p>Your OTP is:</p>
+      <h1>${otp}</h1>
+      <p>This OTP will expire in 5 minutes.</p>
+    `,
+  });
+
+  return {
+    message: 'OTP sent to your email',
+  };
+};
+
+export const setNewPasswordService = async (
+  email: string,
+  otp: string,
+  password: string,
+) => {
+  const user = await User.findOne({ email });
+
+  if (!user) throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+
+  if (!user.otp || user.otp !== otp) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid OTP');
+  }
+
+  if (!user.otpExpires || user.otpExpires < new Date()) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'OTP expired');
+  }
+
+  user.password = password;
+  user.otp = undefined;
+  user.otpExpires = undefined;
+
+  await user.save();
+
+  return {
+    message: 'Password reset successfully',
+  };
+};
